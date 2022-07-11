@@ -1,0 +1,31 @@
+version: 0.2
+env:
+  variables:
+    arch: 'x86_64'
+    source_ami_owners: 'amazon'
+    AWS_POLL_DELAY_SECONDS: 30
+    AWS_MAX_ATTEMPTS: 1000
+  exported-variables:
+    - AMI_Version
+    - AMIID
+    - MainEnv
+    - TestEnv
+phases:
+  pre_build:
+    commands:
+      # Generate environment variables to use futher in pipeline. 
+      - VersionTag=v$CODEBUILD_BUILD_NUMBER
+      - export AMI_Version=AMI-v$CODEBUILD_BUILD_NUMBER-$(date +'%F')
+      - export TestEnv=Test-$CODEBUILD_BUILD_NUMBER-v$(date +'%F')
+      - export MainEnv=Main-$CODEBUILD_BUILD_NUMBER-v$(date +'%F')
+      - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+      - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      - apt-get update && apt-get install packer
+      - apt-get install build-essential
+  build:
+    commands:
+      - packer validate --var aws_region=$AWS_DEFAULT_REGION --var aws_ami_name=$AMI_Version --var arch=$arch --var source_ami_owners=$source_ami_owners --var name_tag=$NAMETAG packer/packer-template.json
+      - packer build --var aws_region=$AWS_DEFAULT_REGION --var aws_ami_name=$AMI_Version --var arch=$arch --var source_ami_owners=$source_ami_owners --var name_tag=$NAMETAG packer/packer-template.json
+  post_build:
+    commands:
+      - export AMIID=$(aws ec2 describe-images --filters "Name=name,Values=$AMI_Version" --query 'Images[*].[ImageId]' --output text)

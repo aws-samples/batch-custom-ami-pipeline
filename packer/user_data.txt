@@ -1,0 +1,9 @@
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+--==MYBOUNDARY==
+Content-Type: text/cloud-config; charset="us-ascii"
+runcmd:
+- echo "Hello World"
+- pip3 install awscli boto boto3 wget curl
+--==MYBOUNDARY==--

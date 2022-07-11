@@ -1,0 +1,73 @@
+{
+    "variables": {
+        "aws_region": "{{env `AWS_REGION`}}",
+        "aws_ami_name": null,
+        "source_ami_owners": null,
+        "arch": null,     
+        "name_tag": "{{env `NAMETAG`}}",
+        "instance_profile": "{{env `InstanceIAMRole`}}"
+    },
+
+    "builders": [{
+        "type": "amazon-ebs",
+        "region": "{{user `aws_region`}}",
+        "iam_instance_profile": "{{user `instance_profile`}}",    
+        "instance_type": "t2.small",
+        "launch_block_device_mappings": [
+        {
+          "device_name": "/dev/xvda",
+          "volume_type": "gp3",
+          "volume_size": "30",
+          "encrypted": true,
+          "delete_on_termination": true
+        }
+        ],
+        "ami_block_device_mappings": [
+        {
+          "device_name": "/dev/xvda",
+          "volume_type": "gp3",
+          "volume_size": 30,
+          "encrypted": true,
+          "delete_on_termination": true
+        }
+        ],
+        "ssh_username": "ec2-user",
+        "ami_name": "{{user `aws_ami_name`}}",
+        "ami_description": "Custom AMI for Batch Compute Environment based on ECS Optimized AMI",
+        "tags": {
+            "Release": "{{ user `aws_ami_name`}}",
+            "Name": "{{ user `name_tag`}}"
+        },
+        "snapshot_tags": {
+            "Release": "{{ user `aws_ami_name`}}",
+            "Name": "{{ user `name_tag`}}"
+        },
+        "source_ami_filter": {
+            "filters": {
+                "virtualization-type": "hvm",
+                "name": "amzn2-ami-ecs-hvm-*-x86_64-ebs",
+                "root-device-type": "ebs",
+                "architecture": "{{user `arch`}}"
+            },
+            "owners": [ "{{user `source_ami_owners`}}" ],
+            "most_recent": true
+        }
+    }],
+
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+                "sudo yum install gcc wget parted.x86_64 python3 python3-pip python3-setuptools -y",
+                "sudo pip3 install awscli boto boto3 --upgrade"
+            ]
+        }
+        ,
+        {
+          "type": "shell",
+          "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'",
+          "expect_disconnect": true,
+          "script": "{{template_dir}}/custom-package-script.sh"
+        }
+    ]
+}
