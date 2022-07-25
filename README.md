@@ -1,10 +1,9 @@
 # Implementing an AWS CodePipeline to automate the Custom AMI creation for an AWS Batch Compute environment using an ephemeral environment
 
 
-
 If you need to install a lot of software that isn't included in the standard AMIs for your jobs on AWS Batch, you can improve provisioning times by using a custom AMI for the compute environment. Having said that, the entire workflow for building a custom AMI can be a challenge to get right.
 
-In this blog, we will be using AWS CodePipeline to automate the Custom AMI creation for an AWS Batch Compute environment using the  Packer tool by HashiCorp and the pipeline will facilitate the creation of an ephermal test environment  before the production deployment. This cloud infrastructure is automated using AWS CDK.
+In this Solution, we will be using AWS CodePipeline to automate the Custom AMI creation for an AWS Batch Compute environment using the  Packer tool by HashiCorp and the pipeline will facilitate the creation of an ephermal test environment  before the production deployment. This cloud infrastructure is automated using AWS CDK.
 
 [_AWS CodePipeline_](https://aws.amazon.com/codepipeline/) is a fully managed [_continuous delivery_](https://aws.amazon.com/devops/continuous-delivery/) service that helps you automate your release pipelines for fast and reliable application and infrastructure updates. CodePipeline automates the build, test, and deploy phases of your release process every time there is a code change, based on the release model you define.
 
