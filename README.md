@@ -1,5 +1,3 @@
-PR
-
 # Implementing an AWS CodePipeline to automate the Custom AMI creation for an AWS Batch Compute environment using an ephemeral environment
 
 
