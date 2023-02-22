@@ -1,3 +1,5 @@
+PR
+
 # Implementing an AWS CodePipeline to automate the Custom AMI creation for an AWS Batch Compute environment using an ephemeral environment
 
 
@@ -41,10 +43,9 @@ Our pipeline will be connected to a source control repository, which after the f
 ### Clone the repository
 
 ```
-cd batch-custom-ami-pipeline/
 cd ~/environment
-git clone [https://github.com/aws-samples/batch-custom-ami-pipeline](https://github.com/aws-samples/batch-custom-ami-pipeline)
-
+git clone https://github.com/aws-samples/batch-custom-ami-pipeline
+cd batch-custom-ami-pipeline/
 ```
 
 ### Update the variables
@@ -58,6 +59,13 @@ sed -i -e 's/MYSTATEMACHINE/myStateMachine/g' app.py
 sed -i -e 's/abc@amazon.com/myemailid@mycompany.com/g' app.py
 ```
 
+### Set AWS region for the deployment
+
+
+```
+export AWS_REGION=us-east-1
+```
+
 # Deployment
 
 ## Amazon CodeCommit
@@ -66,7 +74,7 @@ Create a source control repository to push our CDK infrastructure code.
 
 
 ```
-aws codecommit create-repository --repository-name "batch-custom-ami-workshop" --repository-description "Batch Custom AMI Pipelines Workshop" --region [region-name]
+aws codecommit create-repository --repository-name "batch-custom-ami-workshop" --repository-description "Batch Custom AMI Pipelines Workshop" --region  $AWS_REGION
 ```
 
 
@@ -85,7 +93,7 @@ Add this to our project as an upstsream
 
 ```
 git remote rm origin
-git remote add origin [_https://git-codecommit.us-east-1.amazonaws.com/v1/repos/batch-custom-ami-workshop_](https://git-codecommit.us-east-1.amazonaws.com/v1/repos/batch-custom-ami-workshop)
+git remote add origin https://git-codecommit.$AWS_REGION.amazonaws.com/v1/repos/batch-custom-ami-workshop
 ```
 
 
@@ -171,7 +179,7 @@ self.vpc = vpc
 This will create a custom VPC which will be used by the Batch compute environment
 
 
-#### Deploy VPC stack.
+## Deploy VPC stack.
 
 ```
 cdk deploy VpcStack --require-approval never
@@ -182,7 +190,7 @@ Once the **VpcStack** is deployed it will create VPC, public subnets and private
 
 
 ```
-arn:aws:cloudformation:us-west-2:123456789012:stack/VpcStack/a18d5190-0217-11ed-83b5-068efe1da0e9
+arn:aws:cloudformation:us-east-1:123456789012:stack/VpcStack/a18d5190-0217-11ed-83b5-068efe1da0e9
 Outputs:
 
 VpcStack.ExportsOutputRefVPCB9E5F0B4BD23A326 = vpc-02b3e50eb660e1003
@@ -219,23 +227,23 @@ After this approval is complete, it then deploys pilot environment in AWS Batch 
 
 The benefits of automating AMI updates include the ability to quickly incorporate new AMI releases from the ECS service team which include the latest ECS-agent and fix various vulnerabilities at the OS level. The workflow also helps users quickly deploy changes to their custom AMIs with minimal work/effort.
 
-# Deploying Pipeline
+## Deploying Pipeline
 
 Deploy Pipeline stack
 
+```
+cdk deploy PipelineCustomAMIStack --require-approval never
+```
 
 ```
 ✅ PipelineCustomAMIStack
 
 Outputs:
-PipelineCustomAMIStack.PipelineOutput = _https://console.aws.amazon.com/codepipeline/home?region=us-east-2#/view/MyPipeline_
+PipelineCustomAMIStack.PipelineOutput = _https://console.aws.amazon.com/codepipeline/home?region=us-east-1#/view/MyPipeline_
 
 Stack ARN:
-arn:aws:cloudformation:us-east-2:``123456789012``:stack/PipelineCustomAMIStack/fb5f73e0-ee60-11eb-944e-068aac37321e
+arn:aws:cloudformation:us-east-1:``123456789012``:stack/PipelineCustomAMIStack/fb5f73e0-ee60-11eb-944e-068aac37321e
 cdk synth
-
-cdk deploy PipelineCustomAMIStack --require-approval never
-
 ```
 
 
@@ -248,10 +256,22 @@ Copy CodePipeline URL from the output above and paste it in browser to access th
 
 ```
 cd batch-custom-ami-workshop
+aws cloudformation delete-stack --stack-name BatchDeployStack 
+aws cloudformation wait stack-delete-complete --stack-name BatchDeployStack
 cdk destroy PipelineCustomAMIStack -f
 cdk destroy VpcStack -f
 ```
 
+Delete created EC2 AMIs and AWS CodeCommit repository, if necessary.
+```
+AMI_ID=$(aws ec2 describe-images --filters "Name=tag:Name,Values=BatchAMI1" --query 'Images[*].[ImageId]' --output text)
+aws ec2 deregister-image --image-id $AMI_ID
+
+SNAPSHOT_ID=$(aws ec2 describe-snapshots --filters "Name=tag:Name,Values=BatchAMI1" --query 'Snapshots[*].[SnapshotId]' --output text)
+aws ec2 delete-snapshot --snapshot-id $SNAPSHOT_ID
+
+aws codecommit delete-repository --repository-name batch-custom-ami-workshop
+```
 
 You will need to manually delete the S3 bucket since it is not empty
 
